@@ -6,6 +6,8 @@
 
 #include <memory>
 #include <algorithm>
+#include <cassert>
+
 
 bool CStegano::init(const std::wstring& path, SteganoMethod method, EncodingSchemes scheme /*= EncodingSchemes::Encode_None*/)
 {
@@ -110,14 +112,16 @@ size_t CStegano::decode(unsigned char *toRead, size_t size)
 	const size_t sizeOfOut = CDataEncoder::getBufferSizeForDecoded(m_encodingScheme, decoded);
 	std::unique_ptr<unsigned char[]> buffer(new unsigned char[sizeOfOut]);
 	unsigned char * const dataOut = buffer.get();
-
-	if (!buffer)
+	
+	if (!buffer /* || decoded != m_lastOperationHeader.sizeOfOriginalData */ )
 	{
 		return 0;
 	}
 
 	CDataEncoder dataEnc;
 	size = dataEnc.decode(static_cast<EncodingSchemes>(m_lastOperationHeader.encodingScheme), data, decoded, dataOut, sizeOfOut);
+
+	assert(size == m_lastOperationHeader.sizeOfOriginalData);
 
 	memcpy(data, dataOut, size);
 	return size;
@@ -196,22 +200,19 @@ size_t CStegano::decodeAppend(unsigned char* toWrite, size_t size)
 {
 	size_t processed = 0;
 
-	m_file->seekg(0, std::ios_base::end);
-	const int fileSize = m_file->tellg();
-	int pos = fileSize - 4;
-
-	m_file->seekg(pos, std::ios_base::beg);
+	m_file->seekg(-4, std::ios_base::end);
+	int pos = 0;
 	
 	unsigned int readDword = 0;
-	while (pos > 0 && !m_file->fail() && readDword != Magic_Data_Start_Marker)
+	while (!m_file->fail() && readDword != Magic_Data_Start_Marker)
 	{
 		m_file->read(reinterpret_cast<char*>(&readDword), sizeof(readDword));
-		m_file->seekg(--pos, std::ios_base::beg);
+		m_file->seekg(--pos - 4, std::ios_base::end);
 	}
 
 	if (readDword == Magic_Data_Start_Marker)
 	{
-		m_file->seekg(pos+1, std::ios_base::beg);
+		m_file->seekg(1, std::ios_base::cur);
 		m_file->read(reinterpret_cast<char*>(&m_lastOperationHeader), sizeof(EncodedDataHeader));
 
 		if (m_lastOperationHeader.marker == Magic_Data_Start_Marker)
@@ -219,6 +220,7 @@ size_t CStegano::decodeAppend(unsigned char* toWrite, size_t size)
 			size_t sizeToRead = std::min(size, m_lastOperationHeader.sizeOfEncodedData);
 			m_file->read(reinterpret_cast<char*>(toWrite), sizeToRead);
 			processed = m_file->gcount();
+			toWrite[processed] = 0;
 		}
 	}
 

@@ -67,5 +67,3 @@ int main(int argc, char** argv)
 		wcout << L"Encoding and decoding doesn't work correctly yet." << endl;
 	}
 }
-
-
