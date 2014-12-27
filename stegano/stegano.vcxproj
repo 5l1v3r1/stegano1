@@ -62,6 +62,13 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>libpng.lib;zlib.lib;jpeg.lib</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>
+      </Command>
+    </PostBuildEvent>
+    <PreBuildEvent>
+      <Command>"d:\!_PK\Prace\GKiM_proj\stegano\debug.bat"</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -83,7 +90,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="BmpImage.cpp" />
-    <ClCompile Include="ImageFile.cpp" />
+    <ClCompile Include="DataEncoder.cpp" />
     <ClCompile Include="JpegImage.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="PngImage.cpp" />
@@ -92,6 +99,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BmpImage.h" />
+    <ClInclude Include="DataEncoder.h" />
     <ClInclude Include="ImageFile.h" />
     <ClInclude Include="JpegImage.h" />
     <ClInclude Include="PngImage.h" />
