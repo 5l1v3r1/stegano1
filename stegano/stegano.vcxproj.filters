@@ -30,10 +30,10 @@
     <ClCompile Include="Stegano.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="XGetopt.cpp">
+    <ClCompile Include="DataEncoder.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="DataEncoder.cpp">
+    <ClCompile Include="getopt.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -53,10 +53,10 @@
     <ClInclude Include="Stegano.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="XGetopt.h">
+    <ClInclude Include="DataEncoder.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="DataEncoder.h">
+    <ClInclude Include="getopt.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

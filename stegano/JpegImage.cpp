@@ -10,24 +10,6 @@ bool CJpegImage::loadImage(const std::wstring& path)
 }
 
 
-uint32_t CJpegImage::getWidth()
-{
-	return m_width;
-}
-
-
-uint32_t CJpegImage::getHeight()
-{
-	return m_height;
-}
-
-
-uint32_t CJpegImage::getNumberOfPixels()
-{
-	return m_numberOfPixels;
-}
-
-
 size_t CJpegImage::getDataFromHeader(unsigned char *data, size_t sizeOfBuffer)
 {
 	return 0;

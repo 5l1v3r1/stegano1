@@ -11,10 +11,6 @@ public:
 
 	virtual bool loadImage(const std::wstring& path) override;
 
-	virtual uint32_t getWidth() override;
-	virtual uint32_t getHeight() override;
-	virtual uint32_t getNumberOfPixels() override;
-
 	virtual size_t getDataFromHeader(unsigned char *data, size_t sizeOfBuffer) override;
 	virtual size_t putDataToHeader(unsigned char *data, size_t sizeOfData) override;
 
@@ -23,8 +19,5 @@ public:
 
 
 private:
-	uint32_t m_width;
-	uint32_t m_height;
-	uint32_t m_numberOfPixels;
 };
 

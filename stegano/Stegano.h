@@ -4,6 +4,7 @@
 #include "DataEncoder.h"
 
 #include <string>
+#include <tuple>
 
 #define BSWAP(x)	(((x & 0xff000000) >> 24) | ((x & 0xff0000) >> 8) | ((x & 0xff00) << 8) | ((x & 0xff) << 24))
 
@@ -23,6 +24,16 @@ class CStegano
 	};
 #pragma pack()
 
+
+	enum RecognizedImageFormat
+	{
+		Image_Unknown,
+		Image_Bmp,
+		Image_Png,
+		Image_Jpg,
+	};
+
+	typedef std::tuple<uint32_t, uint32_t> ImagePosition;
 
 public:
 
@@ -74,11 +85,14 @@ public:
 
 protected:
 
-	static CImageFile *loadImage(const std::wstring& path);
+	CImageFile *loadImage(const std::wstring& path);
 
 	size_t encodeAppend(unsigned char* toWrite, size_t size);
 	size_t encodeMetadata(unsigned char* toWrite, size_t size);
 	size_t encodeLSB(unsigned char* toWrite, size_t size);
+
+	void encodeLSBLoop(unsigned char* toWrite, size_t toEncode, uint32_t startPixel);
+
 	size_t encodeLSBIncDec(unsigned char* toWrite, size_t size);
 	size_t encodeLSBEdges(unsigned char* toWrite, size_t size);
 	size_t encodeLSBColor(unsigned char* toWrite, size_t size);
@@ -90,8 +104,33 @@ protected:
 	size_t decodeLSBEdges(unsigned char* toWrite, size_t size);
 	size_t decodeLSBColor(unsigned char* toWrite, size_t size);
 
+	// Some utilities
+	inline char getBit(char byte, unsigned char bit)
+	{
+		return ((byte & (1 << bit)) >> bit) & 1;
+	}
+
+	inline size_t calculateNeededSpace(size_t sizeOfDataToEncode)
+	{
+		return (sizeOfDataToEncode + sizeof(Magic_Data_Start_Marker)) * 8;
+	}
+
+	size_t calculateAvailableSpace();
+
+	inline ImagePosition pixelNumberToImagePosition(uint32_t pos)
+	{
+		const uint32_t w = m_imageFile->getWidth();
+		return std::make_tuple<uint32_t, uint32_t>((pos % w), (pos / w));
+	}
+
+
 private:
 
+	size_t decodeLSBLoop(uint8_t* buff, uint32_t pos, uint32_t iterations);
+
+private:
+
+	RecognizedImageFormat m_imageFormat;
 	EncodingSchemes m_encodingScheme;
 	SteganoMethod m_method;
 	EncodedDataHeader m_lastOperationHeader;

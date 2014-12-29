@@ -91,20 +91,20 @@
   <ItemGroup>
     <ClCompile Include="BmpImage.cpp" />
     <ClCompile Include="DataEncoder.cpp" />
+    <ClCompile Include="getopt.cpp" />
     <ClCompile Include="JpegImage.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="PngImage.cpp" />
     <ClCompile Include="Stegano.cpp" />
-    <ClCompile Include="XGetopt.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BmpImage.h" />
     <ClInclude Include="DataEncoder.h" />
+    <ClInclude Include="getopt.h" />
     <ClInclude Include="ImageFile.h" />
     <ClInclude Include="JpegImage.h" />
     <ClInclude Include="PngImage.h" />
     <ClInclude Include="Stegano.h" />
-    <ClInclude Include="XGetopt.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

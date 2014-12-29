@@ -10,24 +10,6 @@ bool CPngImage::loadImage(const std::wstring& path)
 }
 
 
-uint32_t CPngImage::getWidth()
-{
-	return m_width;
-}
-
-
-uint32_t CPngImage::getHeight()
-{
-	return m_height;
-}
-
-
-uint32_t CPngImage::getNumberOfPixels()
-{
-	return m_numberOfPixels;
-}
-
-
 size_t CPngImage::getDataFromHeader(unsigned char *data, size_t sizeOfBuffer)
 {
 	return 0;
