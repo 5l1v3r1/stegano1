@@ -25,8 +25,8 @@ public:
 	// header as a container for additional data.
 	// ICC Profiles header don't have any particular structure, so we will treat
 	// this as a simple appending method. Only certain header fields have to be corrected.
-	virtual size_t getDataFromHeader(unsigned char *data, size_t sizeOfBuffer) override;
-	virtual size_t putDataToHeader(unsigned char *data, size_t sizeOfData) override;
+	virtual size_t getDataFromHeader(char *data, size_t sizeOfBuffer) override;
+	virtual size_t putDataToHeader(char *data, size_t sizeOfData) override;
 
 	virtual CImageFile::ImageColor getPixel(uint32_t x, uint32_t y) override;
 	virtual void setPixel(uint32_t x, uint32_t y, const CImageFile::ImageColor& color) override;

@@ -45,7 +45,7 @@ bool CBmpImage::loadImage(const std::wstring& path)
 }
 
 
-size_t CBmpImage::getDataFromHeader(unsigned char *data, size_t sizeOfBuffer)
+size_t CBmpImage::getDataFromHeader(char *data, size_t sizeOfBuffer)
 {
 	if (m_bmpv5Hdr.bV5Size != 0 && m_bmpv5Hdr.bV5CSType == PROFILE_EMBEDDED)
 	{
@@ -55,7 +55,7 @@ size_t CBmpImage::getDataFromHeader(unsigned char *data, size_t sizeOfBuffer)
 
 		size_t toRead = min(sizeOfData, sizeOfBuffer);
 		m_file.seekg(pos, std::ios_base::beg);
-		m_file.read(reinterpret_cast<char*>(data), toRead);
+		m_file.read(data, toRead);
 		read = static_cast<size_t>(m_file.gcount());
 
 		return read;
@@ -69,7 +69,7 @@ size_t CBmpImage::getDataFromHeader(unsigned char *data, size_t sizeOfBuffer)
 }
 
 
-size_t CBmpImage::putDataToHeader(unsigned char *data, size_t sizeOfData)
+size_t CBmpImage::putDataToHeader(char *data, size_t sizeOfData)
 {
 	m_file.seekp(0, std::ios_base::end);
 	size_t pos = static_cast<size_t>(m_file.tellp());
@@ -83,7 +83,7 @@ size_t CBmpImage::putDataToHeader(unsigned char *data, size_t sizeOfData)
 
 	// Appending at the end of the file (where the actual ICC profiles headers exist)
 	std::streampos processed = static_cast<std::streampos>(pos);
-	m_file.write(reinterpret_cast<char*>(data), sizeOfData);
+	m_file.write(data, sizeOfData);
 	processed = m_file.tellp() - processed;
 
 	return static_cast<size_t>(processed);

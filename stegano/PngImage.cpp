@@ -10,13 +10,13 @@ bool CPngImage::loadImage(const std::wstring& path)
 }
 
 
-size_t CPngImage::getDataFromHeader(unsigned char *data, size_t sizeOfBuffer)
+size_t CPngImage::getDataFromHeader(char *data, size_t sizeOfBuffer)
 {
 	return 0;
 }
 
 
-size_t CPngImage::putDataToHeader(unsigned char *data, size_t sizeOfData)
+size_t CPngImage::putDataToHeader(char *data, size_t sizeOfData)
 {
 	return 0;
 }

@@ -10,13 +10,13 @@ bool CJpegImage::loadImage(const std::wstring& path)
 }
 
 
-size_t CJpegImage::getDataFromHeader(unsigned char *data, size_t sizeOfBuffer)
+size_t CJpegImage::getDataFromHeader(char *data, size_t sizeOfBuffer)
 {
 	return 0;
 }
 
 
-size_t CJpegImage::putDataToHeader(unsigned char *data, size_t sizeOfData)
+size_t CJpegImage::putDataToHeader(char *data, size_t sizeOfData)
 {
 	return 0;
 }

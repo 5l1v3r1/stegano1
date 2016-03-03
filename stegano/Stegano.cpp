@@ -7,12 +7,31 @@
 #include <memory>
 #include <algorithm>
 #include <cassert>
-
 #include <iostream>
 #include <iomanip>
 
+using std::cout;
+using std::wcout;
+using std::endl;
 
-bool CStegano::init(const std::wstring& path, SteganoMethod method, EncodingSchemes scheme /*= EncodingSchemes::Encode_None*/)
+
+const wchar_t *getMethodName(CStegano::SteganoMethod method)
+{
+	switch (method)
+	{
+	case CStegano::SteganoMethod::Stegano_LSB: return L"LSB";
+	case CStegano::SteganoMethod::Stegano_LSB_IncDec: return L"LSB IncDec";
+	case CStegano::SteganoMethod::Stegano_LSB_Edges: return L"LSB Edges";
+	case CStegano::SteganoMethod::Stegano_2LSB_Color: return L"2LSB Color";
+	case CStegano::SteganoMethod::Stegano_Metadata: return L"Metadata";
+	case CStegano::SteganoMethod::Stegano_Append: return L"Append";
+	}
+
+	return L"Unknown";
+}
+
+
+bool CStegano::init(const std::wstring& path, SteganoMethod method, EncodingSchemes scheme, bool verbose)
 {
 	m_method = method;
 	m_encodingScheme = scheme;
@@ -25,10 +44,10 @@ bool CStegano::init(const std::wstring& path, SteganoMethod method, EncodingSche
 	m_file = &m_imageFile->getFile();
 
 	m_numOfPixels = m_imageFile->getNumberOfPixels();
+	m_verbose = verbose;
 
 	return ret;
 }
-
 
 
 CImageFile *CStegano::loadImage(const std::wstring& path)
@@ -94,28 +113,46 @@ CImageFile *CStegano::loadImage(const std::wstring& path)
 }
 
 
-size_t CStegano::encode(unsigned char *toWrite, size_t size)
+size_t CStegano::encode(char *toWrite, size_t size)
 {
 	const size_t sizeOfHeader = sizeof(EncodedDataHeader);
 	const size_t sizeOfOut = CDataEncoder::getBufferSizeForEncoded(m_encodingScheme, size) + sizeOfHeader;
 
-	std::unique_ptr<unsigned char[]> buffer(new unsigned char[sizeOfOut]);
-	unsigned char * const data = buffer.get();
+	std::unique_ptr<char[]> buffer(new char[sizeOfOut]);
+	char * const data = buffer.get();
 
 	if (!buffer)
 	{
 		return 0;
 	}
 
+	if (m_verbose)
+	{
+		wcout << "Using encoding method: " << getMethodName(m_method) << endl;
+	}
+
 	CDataEncoder dataEnc;
 	EncodedDataHeader packet;
-	unsigned char * dataAfterHeader = data + sizeOfHeader;
-	unsigned int sizeOfEncoded = dataEnc.encode(m_encodingScheme, toWrite, size, dataAfterHeader, sizeOfOut);
+	char * dataAfterHeader = data + sizeOfHeader;
+	size_t sizeOfEncoded = dataEnc.encode(m_encodingScheme, toWrite, size, dataAfterHeader, sizeOfOut);
+
+	if (m_verbose)
+	{
+		size_t s1 = min(BYTES_TO_HEX_DUMP, size);
+		size_t s2 = min(BYTES_TO_HEX_DUMP, sizeOfEncoded);
+
+		wcout << L"First " << s1 << L" bytes of data before encoding using method " << getCompressionName(m_encodingScheme) << ":\n";
+		hexdump(toWrite, s1);
+		wcout << L"\nFirst " << s2 << L" bytes of data encoded using " << getCompressionName(m_encodingScheme) << ":\n";
+		hexdump(dataAfterHeader, s2);
+		wcout << L"\n";
+		wcout << "Bytes to encode: " << size << ", bytes after encoding: " << sizeOfEncoded << ". Ratio: " << float(sizeOfEncoded) / size << endl;
+	}
 
 	packet.marker = Magic_Data_Start_Marker;
 	packet.encodingScheme = m_encodingScheme;
 	packet.sizeOfOriginalData = size;
-	packet.sizeOfEncodedData = max(sizeOfEncoded, size);
+	packet.sizeOfEncodedData = sizeOfEncoded;
 
 	memcpy(data, &packet, sizeOfHeader);
 	memcpy(&m_lastOperationHeader, &packet, sizeOfHeader);
@@ -138,10 +175,15 @@ size_t CStegano::encode(unsigned char *toWrite, size_t size)
 }
 
 
-size_t CStegano::decode(unsigned char *toRead, size_t size)
+size_t CStegano::decode(char *toRead, size_t size)
 {
 	size_t decoded = 0;
-	unsigned char *data = toRead;
+	char *data = toRead;
+
+	if (m_verbose)
+	{
+		wcout << "Using decoding method: " << getMethodName(m_method) << endl;
+	}
 
 	switch (m_method)
 	{
@@ -153,10 +195,11 @@ size_t CStegano::decode(unsigned char *toRead, size_t size)
 		case Stegano_LSB_IncDec: decoded = decodeLSBIncDec(data, size); break;
 	}
 
+	auto m = static_cast<EncodingSchemes>(m_lastOperationHeader.encodingScheme);
+	const size_t sizeOfOut = CDataEncoder::getBufferSizeForDecoded(m, decoded);
 
-	const size_t sizeOfOut = CDataEncoder::getBufferSizeForDecoded(m_encodingScheme, decoded);
-	std::unique_ptr<unsigned char[]> buffer(new unsigned char[sizeOfOut]);
-	unsigned char * const dataOut = buffer.get();
+	std::unique_ptr<char[]> buffer(new char[sizeOfOut]);
+	char * const dataOut = buffer.get();
 	
 	if (!buffer /* || decoded != m_lastOperationHeader.sizeOfOriginalData */ )
 	{
@@ -164,12 +207,26 @@ size_t CStegano::decode(unsigned char *toRead, size_t size)
 	}
 
 	CDataEncoder dataEnc;
-	size = dataEnc.decode(static_cast<EncodingSchemes>(m_lastOperationHeader.encodingScheme), data, decoded, dataOut, sizeOfOut);
+	size_t sizeOfDecoded = dataEnc.decode(m, data, decoded, dataOut, sizeOfOut);
 
-	assert(size == m_lastOperationHeader.sizeOfOriginalData);
+	assert(sizeOfDecoded == m_lastOperationHeader.sizeOfOriginalData);
 
-	memcpy(data, dataOut, size);
-	return size;
+	if (m_verbose)
+	{
+		size_t s1 = min(BYTES_TO_HEX_DUMP, sizeOfOut);
+		size_t s2 = min(BYTES_TO_HEX_DUMP, sizeOfDecoded);
+
+		wcout << L"First " << s1 << L" bytes of data extracted out from image using " << getMethodName(m_method) << L" method:\n";
+		hexdump(data, s1);
+		wcout << L"\nFirst " << s2 << L" bytes of data decoded using " << getCompressionName(m) << ":\n";
+		hexdump(dataOut, s2);
+		wcout << L"\n";
+		wcout << "Bytes decoded: " << sizeOfDecoded << endl;
+	}
+
+	memcpy(data, dataOut, sizeOfDecoded);
+
+	return sizeOfDecoded;
 }
 
 
@@ -187,26 +244,26 @@ bool CStegano::getLastOperationHeader(EncodedDataHeader &header)
 }
 
 
-size_t CStegano::encodeAppend(unsigned char* toWrite, size_t size)
+size_t CStegano::encodeAppend(char* toWrite, size_t size)
 {
 	std::streampos processed = 0;
 
 	m_file->seekp(0, std::ios_base::end);
 	processed = m_file->tellp();
-	m_file->write(reinterpret_cast<const char*>(toWrite), size);
+	m_file->write(toWrite, size);
 	processed = m_file->tellp() - processed;
 
 	return static_cast<size_t>(processed);
 }
 
 
-size_t CStegano::encodeMetadata(unsigned char* toWrite, size_t size)
+size_t CStegano::encodeMetadata(char* toWrite, size_t size)
 {
 	return m_imageFile->putDataToHeader(toWrite, size);
 }
 
 
-size_t CStegano::encodeLSB(unsigned char* toWrite, size_t size)
+size_t CStegano::encodeLSB(char* toWrite, size_t size)
 {
 	size_t processed = 0;
 	size_t toEncode = 0;
@@ -238,32 +295,38 @@ size_t CStegano::encodeLSB(unsigned char* toWrite, size_t size)
 }
 
 
-size_t CStegano::encodeLSBIncDec(unsigned char* toWrite, size_t size)
+size_t CStegano::encodeLSBIncDec(char* toWrite, size_t size)
 {
 	size_t processed = 0;
+
+	wcout << L"Not implemented yet." << endl;
 
 	return processed;
 }
 
 
-size_t CStegano::encodeLSBEdges(unsigned char* toWrite, size_t size)
+size_t CStegano::encodeLSBEdges(char* toWrite, size_t size)
 {
 	size_t processed = 0;
+
+	wcout << L"Not implemented yet." << endl;
 
 	return processed;
 }
 
 
-size_t CStegano::encodeLSBColor(unsigned char* toWrite, size_t size)
+size_t CStegano::encodeLSBColor(char* toWrite, size_t size)
 {
 	size_t processed = 0;
+
+	wcout << L"Not implemented yet." << endl;
 
 	return processed;
 }
 
 
 
-size_t CStegano::decodeAppend(unsigned char* toWrite, size_t size)
+size_t CStegano::decodeAppend(char* toWrite, size_t size)
 {
 	size_t processed = 0;
 
@@ -295,7 +358,7 @@ size_t CStegano::decodeAppend(unsigned char* toWrite, size_t size)
 }
 
 
-size_t CStegano::decodeMetadata(unsigned char* toWrite, size_t size)
+size_t CStegano::decodeMetadata(char* toWrite, size_t size)
 {
 	size_t processed = m_imageFile->getDataFromHeader(toWrite, size);
 	if (!processed && m_imageFile->getError() == BMP_ERROR_NO_METADATA_STRUCTURE)
@@ -310,7 +373,7 @@ size_t CStegano::decodeMetadata(unsigned char* toWrite, size_t size)
 }
 
 
-size_t CStegano::decodeLSB(unsigned char* toWrite, size_t size)
+size_t CStegano::decodeLSB(char* toWrite, size_t size)
 {
 	size_t processed = 0;
 
@@ -334,11 +397,26 @@ size_t CStegano::decodeLSB(unsigned char* toWrite, size_t size)
 	size_t sizeOfExtractedHeader = decodeLSBLoop(header, 0, sizeOfHeader);
 	memcpy(&m_lastOperationHeader, header, sizeof(EncodedDataHeader));
 
+	if (m_verbose)
+	{
+		auto marker = _byteswap_ulong(m_lastOperationHeader.marker);
+
+		wcout << "\nExtracted header's contents:" << endl;
+		wcout << "  struct EncodedDataHeader" << endl;
+		wcout << "  {" << endl;
+		wcout << "    marker = " << std::hex << std::setprecision(8) << std::setfill(L'0') << marker << ";" << endl;
+		wcout << "    encodingScheme = " << std::dec << m_lastOperationHeader.encodingScheme 
+				<< ";\t// compression: " << getCompressionName(static_cast<EncodingSchemes>(m_lastOperationHeader.encodingScheme)) << endl;
+		wcout << "    sizeOfOriginalData = " << std::dec << m_lastOperationHeader.sizeOfOriginalData << ";" << endl;
+		wcout << "    sizeOfEncodedData = " << std::dec << m_lastOperationHeader.sizeOfEncodedData << ";" << endl;
+		wcout << "  };" << endl << endl;
+	}
+
 	// Validate extracted header
 	if (sizeOfExtractedHeader == sizeof(EncodedDataHeader) && m_lastOperationHeader.marker == Magic_Data_Start_Marker)
 	{
 		// Extract the rest of the data
-		processed = decodeLSBLoop(toWrite, sizeOfHeader, m_lastOperationHeader.sizeOfEncodedData);
+		processed = decodeLSBLoop(reinterpret_cast<uint8_t*>(toWrite), sizeOfHeader, m_lastOperationHeader.sizeOfEncodedData);
 		toWrite[processed] = 0;
 	}
 
@@ -346,25 +424,31 @@ size_t CStegano::decodeLSB(unsigned char* toWrite, size_t size)
 }
 
 
-size_t CStegano::decodeLSBIncDec(unsigned char* toWrite, size_t size)
+size_t CStegano::decodeLSBIncDec(char* toWrite, size_t size)
 {
 	size_t processed = 0;
+
+	wcout << L"Not implemented yet." << endl;
 
 	return processed;
 }
 
 
-size_t CStegano::decodeLSBEdges(unsigned char* toWrite, size_t size)
+size_t CStegano::decodeLSBEdges(char* toWrite, size_t size)
 {
 	size_t processed = 0;
+
+	wcout << L"Not implemented yet." << endl;
 
 	return processed;
 }
 
 
-size_t CStegano::decodeLSBColor(unsigned char* toWrite, size_t size)
+size_t CStegano::decodeLSBColor(char* toWrite, size_t size)
 {
 	size_t processed = 0;
+
+	wcout << L"Not implemented yet." << endl;
 
 	return processed;
 }
@@ -406,6 +490,13 @@ size_t CStegano::decodeLSBLoop(uint8_t* buff, uint32_t pos, uint32_t iterations)
 
 	for (; pos < iterations; pos++)
 	{
+		if (m_verbose && iterations > 10000 && pos % (iterations / 10000) == 0)
+		{
+			const float perc = (float(pos) / iterations) * 100.0;
+			wcout << std::setw(2) << std::setprecision(2) << std::setfill(L'0') << perc << "%) Progress: "
+				<< std::setw(7) << pos/8 << "/" << iterations/8 << " bytes to decode.\r";
+		}
+
 		uint32_t x, y;
 		const uint32_t pixelNo = pos / 3;
 		std::tie(x, y) = pixelNumberToImagePosition(pixelNo);
@@ -439,7 +530,7 @@ size_t CStegano::decodeLSBLoop(uint8_t* buff, uint32_t pos, uint32_t iterations)
 }
 
 
-void CStegano::encodeLSBLoop(unsigned char* toWrite, size_t toEncode, uint32_t startPixel)
+void CStegano::encodeLSBLoop(char* toWrite, size_t toEncode, uint32_t startPixel)
 {
 	int pos = 0;
 	auto lsb = [this](uint8_t &col, uint8_t byte, uint8_t bit) -> void
@@ -450,13 +541,19 @@ void CStegano::encodeLSBLoop(unsigned char* toWrite, size_t toEncode, uint32_t s
 
 	for (uint32_t imageByte = startPixel; imageByte < toEncode; imageByte++)
 	{
+		if (m_verbose && toEncode > 2000 && imageByte % (toEncode / 2000) == 0)
+		{
+			const float perc = (float(imageByte) / toEncode) * 100.0;
+			wcout << std::setw(2) << std::setprecision(2) << std::setfill(L'0') << perc << "%) Progress: "
+				<< std::setw(6) << imageByte << "/" << std::setw(6) << toEncode << " bytes to encode.\r";
+		}
+
 		for (uint8_t bit = 0; bit < 8; bit++, pos++)
 		{
 			uint32_t x, y;
 			const uint32_t pixelNo = pos / 3;
 
 			std::tie(x, y) = pixelNumberToImagePosition(pixelNo);
-
 			CImageFile::ImageColor col = m_imageFile->getPixel(x, y);
 
 			if (pos % 3 == 0)

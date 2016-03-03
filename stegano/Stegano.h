@@ -8,6 +8,8 @@
 
 #define BSWAP(x)	(((x & 0xff000000) >> 24) | ((x & 0xff0000) >> 8) | ((x & 0xff00) << 8) | ((x & 0xff) << 24))
 
+#define BYTES_TO_HEX_DUMP 96
+
 
 class CStegano
 {
@@ -75,10 +77,10 @@ public:
 	CStegano(){}
 	~CStegano(){}
 
-	bool init(const std::wstring& path, SteganoMethod method, EncodingSchemes scheme = EncodingSchemes::Encode_None);
+	bool init(const std::wstring& path, SteganoMethod method, EncodingSchemes scheme = EncodingSchemes::Encode_None, bool verbose = false);
 
-	size_t encode(unsigned char *toWrite, size_t size);
-	size_t decode(unsigned char *toRead, size_t size);
+	size_t encode(char *toWrite, size_t size);
+	size_t decode(char *toRead, size_t size);
 
 	bool getLastOperationHeader(EncodedDataHeader &header);
 
@@ -87,22 +89,22 @@ protected:
 
 	CImageFile *loadImage(const std::wstring& path);
 
-	size_t encodeAppend(unsigned char* toWrite, size_t size);
-	size_t encodeMetadata(unsigned char* toWrite, size_t size);
-	size_t encodeLSB(unsigned char* toWrite, size_t size);
+	size_t encodeAppend(char* toWrite, size_t size);
+	size_t encodeMetadata(char* toWrite, size_t size);
+	size_t encodeLSB(char* toWrite, size_t size);
 
-	void encodeLSBLoop(unsigned char* toWrite, size_t toEncode, uint32_t startPixel);
+	void encodeLSBLoop(char* toWrite, size_t toEncode, uint32_t startPixel);
 
-	size_t encodeLSBIncDec(unsigned char* toWrite, size_t size);
-	size_t encodeLSBEdges(unsigned char* toWrite, size_t size);
-	size_t encodeLSBColor(unsigned char* toWrite, size_t size);
+	size_t encodeLSBIncDec(char* toWrite, size_t size);
+	size_t encodeLSBEdges(char* toWrite, size_t size);
+	size_t encodeLSBColor(char* toWrite, size_t size);
 
-	size_t decodeAppend(unsigned char* toWrite, size_t size);
-	size_t decodeMetadata(unsigned char* toWrite, size_t size);
-	size_t decodeLSB(unsigned char* toWrite, size_t size);
-	size_t decodeLSBIncDec(unsigned char* toWrite, size_t size);
-	size_t decodeLSBEdges(unsigned char* toWrite, size_t size);
-	size_t decodeLSBColor(unsigned char* toWrite, size_t size);
+	size_t decodeAppend(char* toWrite, size_t size);
+	size_t decodeMetadata(char* toWrite, size_t size);
+	size_t decodeLSB(char* toWrite, size_t size);
+	size_t decodeLSBIncDec(char* toWrite, size_t size);
+	size_t decodeLSBEdges(char* toWrite, size_t size);
+	size_t decodeLSBColor(char* toWrite, size_t size);
 
 	// Some utilities
 	inline char getBit(char byte, unsigned char bit)
@@ -138,5 +140,7 @@ private:
 	CImageFile *m_imageFile;
 	std::fstream *m_file;
 	uint32_t m_numOfPixels;
+
+	bool m_verbose;
 };
 

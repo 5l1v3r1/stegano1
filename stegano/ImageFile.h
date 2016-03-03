@@ -50,8 +50,8 @@ public:
 		return (m_file.good() && m_file.is_open());
 	}
 
-	virtual size_t getDataFromHeader(unsigned char *data, size_t sizeOfBuffer){ return 0; }
-	virtual size_t putDataToHeader(unsigned char *data, size_t sizeOfData){ return 0; }
+	virtual size_t getDataFromHeader(char *data, size_t sizeOfBuffer){ return 0; }
+	virtual size_t putDataToHeader(char *data, size_t sizeOfData){ return 0; }
 	
 	virtual ImageColor getPixel(uint32_t x, uint32_t y){ return ImageColor(); }
 	virtual void setPixel(uint32_t x, uint32_t y, const ImageColor& color){}
